@@ -1,0 +1,30 @@
+FROM python:3.11-slim as requirements-stage
+
+WORKDIR /tmp
+
+RUN pip install poetry
+
+COPY ./pyproject.toml ./poetry.lock /tmp/
+
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+
+
+FROM python:3.11-slim as final-stage
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV TZ=Asia/Seoul
+
+COPY --from=requirements-stage /tmp/requirements.txt ./requirements.txt
+
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
+
+COPY ./project ./project
+COPY ./bin/entrypoint.local.sh ./bin/entrypoint.local.sh
+
+EXPOSE 8000
+
+RUN chmod +x ./bin/entrypoint.local.sh
+ENTRYPOINT ["./bin/entrypoint.local.sh"]

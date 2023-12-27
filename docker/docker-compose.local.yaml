@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  api:
+    image: cn-bis-api:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.local
+    container_name: cn-bis-api
+    command: uvicorn --app-dir ./project app.main:app --reload --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips "*"
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2048M
+        reservations:
+          cpus: "2"
+          memory: 2048M
+    volumes:
+      - ..:/app
+    environment:
+      - ENV=local
+    depends_on:
+      - db
+    links:
+      - db
+
+  db:
+    image: mysql:8.0.27
+    container_name: cn-bis-db
+    cap_add:
+      - SYS_NICE
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1024M
+        reservations:
+          cpus: "2"
+          memory: 1024M
+    volumes:
+      - db-volume:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_DATABASE: "${DB_NAME}"
+      MYSQL_USER: "${DB_USER}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+
+volumes:
+  db-volume:

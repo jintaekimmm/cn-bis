@@ -17,6 +17,7 @@ gunicorn = "^21.2.0"
 pre-commit = "^3.6.0"
 black = "^23.12.1"
 flake8 = "^6.1.0"
+cryptography = "^41.0.7"
 
 
 [build-system]

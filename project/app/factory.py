@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
+from connection.database import engine
 from helpers.response import ErrorJSONResponse, DefaultJSONResponse
 
 
@@ -18,8 +19,25 @@ def create_app() -> FastAPI:
     initial_route(app)
     initial_middleware(app)
     set_custom_exception(app)
+    set_event_handler(app)
 
     return app
+
+
+def set_event_handler(app: FastAPI) -> None:
+    """Event Handlers"""
+
+    @app.on_event("startup")
+    async def startup():
+        # Database
+        async with engine.begin():
+            pass
+
+    @app.on_event("shutdown")
+    async def shutdown():
+        # Database
+        if engine:
+            await engine.dispose()
 
 
 def initial_route(app: FastAPI) -> None:
