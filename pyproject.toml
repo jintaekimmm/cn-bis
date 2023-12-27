@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "cn-bis"
+version = "0.1.0"
+description = ""
+authors = ["jintaekimmm <jintae.kimmm@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.108.0"
+uvicorn = {extras = ["standard"], version = "^0.25.0"}
+sqlalchemy = "^2.0.23"
+asyncmy = "^0.2.9"
+pydantic-settings = "^2.1.0"
+loguru = "^0.7.2"
+gunicorn = "^21.2.0"
+pre-commit = "^3.6.0"
+black = "^23.12.1"
+flake8 = "^6.1.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
