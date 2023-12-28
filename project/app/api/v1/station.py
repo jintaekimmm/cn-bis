@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, status, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.responses import JSONResponse
 
 import crud
 import schemas
@@ -12,15 +11,15 @@ router = APIRouter(prefix="/station", tags=["Station"])
 
 
 @router.get(
-    "/search",
-    response_model=schemas.BusSearchResponse,
+    "/location",
+    response_model=schemas.BusStationLocationResponse,
     responses={
         422: {"model": schemas.ErrorValidationResponse},
         500: {"model": schemas.ErrorResponse},
     },
     description="사용자 위치 반경 150M 이내에 존재하는 정류장을 검색한다",
 )
-async def search_station_api(
+async def get_station_location_api(
     *,
     latitude: float = Query(..., ge=-90, le=90, alias="lat", description="사용자 위치(위도)"),
     longitude: float = Query(
@@ -47,17 +46,16 @@ async def search_station_api(
     extend_result = []
 
     try:
-        result = await bus_dal.get_stations_by_location(
+        result = await bus_dal.get_bus_stations_by_location(
             latitude=latitude, longitude=longitude
         )
         # 확장 검색 플래그가 설정되었다면, 버스 경로 상의 정류장에서 추가로 검색한다
         if extend:
-            extend_result = await bus_dal.get_stations_extend_by_route(
+            extend_result = await bus_dal.get_bus_routes_by_location(
                 latitude=latitude, longitude=longitude
             )
     except Exception as e:
         logger.exception(e)
-        await session.rollback()
         return ErrorJSONResponse(
             message="정류장을 검색하는 도중에 문제가 발생하였습니다",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -65,10 +63,10 @@ async def search_station_api(
     finally:
         await session.close()
 
-    response = schemas.BusSearchResponse(
+    response = schemas.BusStationLocationResponse(
         message="ok",
         data=[
-            schemas.BusSearch(
+            schemas.BusStationLocation(
                 location=schemas.Location(latitude=i.latitude, longitude=i.longitude),
                 station_name=i.node_name,
                 ars_id=i.mobile_id,
@@ -80,7 +78,7 @@ async def search_station_api(
     if extend_result:
         response.data.extend(
             [
-                schemas.BusSearch(
+                schemas.BusStationLocation(
                     location=schemas.Location(
                         latitude=i.latitude, longitude=i.longitude
                     ),
@@ -92,5 +90,105 @@ async def search_station_api(
         )
         # ARS_ID를 기준으로 중복된 정류장을 제거한다
         response.data = list({i.ars_id: i for i in response.data}.values())
+
+    return response
+
+
+@router.get(
+    "/search",
+    response_model=schemas.BusSearchResponse,
+    responses={
+        400: {"model": schemas.ErrorResponse},
+        500: {"model": schemas.ErrorResponse},
+    },
+)
+async def get_station_search_api(
+    *, query: str = Query(None), session: AsyncSession = Depends(get_session)
+):
+    """
+    버스 정류장 이름 및 버스 노선 정보로 버스 정류장을 검색한다
+    """
+
+    if not query:
+        return ErrorJSONResponse(
+            message="검색어를 입력해주세요",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    bus_dal = crud.BusDAL(session=session)
+
+    try:
+        #################
+        # 버스정류장 조회   #
+        #################
+        # 버스 정류장에서 정류장 이름으로 검색한다
+        bus_station_result = await bus_dal.get_bus_stations_by_node_name(
+            node_name=query
+        )
+        # 버스 노선에서 정류장 이름으로 검색한다
+        route_station_result = await bus_dal.get_bus_routes_by_station_name(
+            station_name=query
+        )
+
+        #################
+        # 버스 노선 조회   #
+        #################
+        # 버스 노선 정보에서 노선명으로 검색한다
+        route_result = await bus_dal.get_bus_routes_by_route_name(route_name=query)
+    except Exception as e:
+        logger.exception(e)
+        return ErrorJSONResponse(
+            message="정류장을 검색하는 도중에 문제가 발생하였습니다",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    finally:
+        await session.close()
+
+    # 버스 정류장 정보를 합친다
+    bus_station = [
+        schemas.BusStationLocation(
+            location=schemas.Location(latitude=i.latitude, longitude=i.longitude),
+            station_name=i.node_name,
+            ars_id=i.mobile_id,
+        )
+        for i in bus_station_result
+    ]
+    bus_station.extend(
+        [
+            schemas.BusStationLocation(
+                location=schemas.Location(latitude=i.latitude, longitude=i.longitude),
+                station_name=i.station_name,
+                ars_id=i.ars_id,
+            )
+            for i in route_station_result
+        ]
+    )
+    bus_station = sorted(
+        list({i.ars_id: i for i in bus_station}.values()), key=lambda x: x.station_name
+    )
+
+    # 버스 노선 정보를 반환 형식으로 변경한다
+    bus_routes = schemas.BusRoutes(routes=[])
+    for i in route_result:
+        # 노선명이 변경될 때마다 새로운 데이터를 생성한다
+        if not bus_routes.routes or (bus_routes.routes[-1].route_name != i.route_name):
+            bus_route = schemas.BusRoute(route_name=i.route_name, route=[])
+            bus_routes.routes.append(bus_route)
+
+        # 노선의 경로 정보를 추가한다
+        bus_routes.routes[-1].route.append(
+            schemas.Route(
+                order=i.route_order,
+                ars_id=i.ars_id,
+                station_name=i.station_name,
+                location=schemas.Location(latitude=i.latitude, longitude=i.longitude),
+            )
+        )
+
+    response = schemas.BusSearchResponse(
+        message="ok",
+        data=schemas.BusSearch(bus_station=bus_station, bus_route=bus_routes),
+    )
 
     return response

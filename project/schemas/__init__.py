@@ -3,4 +3,13 @@ from .default import (
     ErrorResponse,
     ErrorValidationResponse,
 )
-from .bus import Location, BusSearch, BusSearchResponse
+from .bus import (
+    Location,
+    BusStationLocation,
+    BusStationLocationResponse,
+    Route,
+    BusRoute,
+    BusRoutes,
+    BusSearch,
+    BusSearchResponse,
+)
