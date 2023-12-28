@@ -38,12 +38,13 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 1024M
+          memory: 2048M
         reservations:
           cpus: "2"
-          memory: 1024M
+          memory: 2048M
     volumes:
       - db-volume:/var/lib/mysql
+      - $PWD/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
       MYSQL_DATABASE: "${DB_NAME}"
