@@ -20,6 +20,7 @@ flake8 = "^6.1.0"
 cryptography = "^41.0.7"
 pandas = "^2.1.4"
 geoalchemy2 = "^0.14.3"
+geopandas = "^0.14.1"
 
 
 [build-system]
