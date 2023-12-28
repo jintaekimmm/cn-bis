@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
+from app.api.v1 import station
 from connection.database import engine
 from helpers.response import ErrorJSONResponse, DefaultJSONResponse
 
@@ -50,6 +51,8 @@ def initial_route(app: FastAPI) -> None:
     @app.get("/health")
     async def health_check():
         return DefaultJSONResponse(message="ok", success=True)
+
+    app.include_router(station.router, prefix="/v1")
 
 
 def initial_middleware(app: FastAPI) -> None:

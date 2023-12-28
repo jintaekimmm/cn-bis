@@ -18,21 +18,18 @@ class DefaultJSONResponse(JSONResponse):
                           status_code=status.HTTP_404_NOT_FOUND)
     [신규]
     return DefaultJSONResponse(message='success',
-                               success=True,
                                status_code=status.HTTP_200_OK)
     """
 
     def __init__(
         self,
         message: Any,
-        success: bool = True,
         status_code: int = 200,
         headers: dict[str, str] | None = None,
         media_type: str | None = None,
         background: BackgroundTask | None = None,
     ) -> None:
         content = {
-            "success": success,
             "message": message,
         }
 
@@ -60,7 +57,6 @@ class ErrorJSONResponse(JSONResponse):
     def __init__(
         self,
         message: Any,
-        success: bool = False,
         status_code: int = 200,
         error_code: int | None = None,
         headers: dict[str, str] | None = None,
@@ -68,7 +64,6 @@ class ErrorJSONResponse(JSONResponse):
         background: BackgroundTask | None = None,
     ) -> None:
         content = {
-            "success": success,
             "error": {
                 "message": message,
                 "error_code": error_code,
