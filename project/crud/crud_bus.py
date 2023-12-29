@@ -1,33 +1,12 @@
 import pandas as pd
-from sqlalchemy import select, delete, insert
+from sqlalchemy import select, delete, insert, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud.abstract import DalABC
 from models import BusRoute, BusStation
 
 
 class LoaderDAL(DalABC):
-    async def delete_route(self) -> None:
-        """
-        bus_route table 데이터를 삭제한다
-
-        :return:
-        """
-
-        q = delete(BusRoute).execution_options(synchronize_session="fetch")
-
-        await self.session.execute(q)
-
-    async def delete_station(self) -> None:
-        """
-        bus_station table 데이터를 삭제한다
-
-        :return:
-        """
-
-        q = delete(BusStation).execution_options(synchronize_session="fetch")
-
-        await self.session.execute(q)
-
     async def bulk_insert_route(self, df: pd.DataFrame) -> None:
         """
         bus_route 데이터를 bulk insert 한다
@@ -81,6 +60,152 @@ class LoaderDAL(DalABC):
             ],
         )
 
+    async def delete_route(self) -> None:
+        """
+        bus_route table 데이터를 삭제한다
+
+        :return:
+        """
+
+        q = delete(BusRoute).execution_options(synchronize_session="fetch")
+
+        await self.session.execute(q)
+
+    async def delete_station(self) -> None:
+        """
+        bus_station table 데이터를 삭제한다
+
+        :return:
+        """
+
+        q = delete(BusStation).execution_options(synchronize_session="fetch")
+
+        await self.session.execute(q)
+
 
 class BusDAL(DalABC):
-    ...
+    def __init__(self, session: AsyncSession) -> None:
+        self.SRID = 4326
+        super().__init__(session=session)
+
+    async def get_bus_stations_by_location(
+        self, latitude: float, longitude: float, distance: int = 150
+    ):
+        """
+        사용자 위치를 기준으로 정류장을 조회한다
+
+        :param latitude: 사용자 위치(위도)
+        :param longitude: 사용자 위치(경도)
+        :param distance: 사용자 기준 반경 거리(단위 M)
+        :return:
+        """
+
+        # 사용자 위치 기준으로 반경 거리만큼 원을 그린다
+        buffer_circle = func.ST_Buffer(
+            func.ST_PointFromText(f"POINT({latitude} {longitude})", self.SRID), distance
+        )
+
+        q = select(
+            BusStation.node_name,
+            func.ST_X(BusStation.location).label("latitude"),
+            func.ST_Y(BusStation.location).label("longitude"),
+            BusStation.mobile_id,
+        ).where(func.ST_Contains(buffer_circle, BusStation.location))
+
+        result = await self.session.execute(q)
+        return result.all()
+
+    async def get_bus_routes_by_location(
+        self, latitude: float, longitude: float, distance: int = 150
+    ):
+        """
+        사용자 위치를 기준으로 버스 경로에서 정류장을 조회한다
+
+        :param latitude:  사용자 위치(위도)
+        :param longitude:  사용자 위치(경도)
+        :param distance: 사용자 기준 반경 거리(M)
+        :return:
+        """
+
+        # 사용자 위치 기준으로 반경 거리만큼 원을 그린다
+        buffer_circle = func.ST_Buffer(
+            func.ST_PointFromText(f"POINT({latitude} {longitude})", self.SRID), distance
+        )
+
+        q = (
+            select(
+                BusRoute.station_name,
+                func.ST_X(BusRoute.location).label("latitude"),
+                func.ST_Y(BusRoute.location).label("longitude"),
+                BusRoute.ars_id,
+            )
+            .where(func.ST_Contains(buffer_circle, BusRoute.location))
+            .group_by(BusRoute.ars_id, BusRoute.station_name, BusRoute.location)
+        )
+
+        result = await self.session.execute(q)
+        return result.all()
+
+    async def get_bus_stations_by_node_name(self, node_name: str):
+        """
+        버스 정류장 이름으로 정류장을 조회한다
+
+        :param node_name: 버스 정류장 이름
+        :return:
+        """
+
+        q = select(
+            BusStation.node_name,
+            func.ST_X(BusStation.location).label("latitude"),
+            func.ST_Y(BusStation.location).label("longitude"),
+            BusStation.mobile_id,
+        ).where(BusStation.node_name.like(f"%{node_name}%"))
+
+        result = await self.session.execute(q)
+        return result.all()
+
+    async def get_bus_routes_by_station_name(self, station_name: str):
+        """
+        버스 정류장 이름으로 정류장을 조회한다
+
+        :param station_name: 버스 정류장 이름
+        :return:
+        """
+
+        q = (
+            select(
+                BusRoute.station_name,
+                func.ST_X(BusRoute.location).label("latitude"),
+                func.ST_Y(BusRoute.location).label("longitude"),
+                BusRoute.ars_id,
+            )
+            .where(BusRoute.station_name.like(f"%{station_name}%"))
+            .group_by(BusRoute.ars_id, BusRoute.station_name, BusRoute.location)
+        )
+
+        result = await self.session.execute(q)
+        return result.all()
+
+    async def get_bus_routes_by_route_name(self, route_name: str):
+        """
+        버스 노선명으로 버스 노선 정보를 조회한다
+
+        :param route_name: 버스 노선명
+        :return:
+        """
+
+        q = (
+            select(
+                BusRoute.route_name,
+                BusRoute.route_order,
+                BusRoute.ars_id,
+                BusRoute.station_name,
+                func.ST_X(BusRoute.location).label("latitude"),
+                func.ST_Y(BusRoute.location).label("longitude"),
+            )
+            .where(BusRoute.route_name.like(f"%{route_name}%"))
+            .order_by(BusRoute.route_name, BusRoute.route_order)
+        )
+
+        result = await self.session.execute(q)
+        return result.all()
