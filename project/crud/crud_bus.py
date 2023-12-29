@@ -1,5 +1,5 @@
 import pandas as pd
-from sqlalchemy import select, delete, insert, func, case, distinct
+from sqlalchemy import select, delete, insert, func, case, distinct, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -297,30 +297,31 @@ class BusDAL(DalABC):
         :return:
         """
 
-        br = aliased(BusRoute)
-        brt = aliased(BusRoute)
+        br1 = aliased(BusRoute)
+        br2 = aliased(BusRoute)
         hjg = aliased(HangJeongGu)
+
+        sub_query = (
+            select(br2.route_name)
+            .join(hjg, func.ST_Within(br2.location, hjg.geometry))
+            .where(
+                and_(br2.route_name == route_name, hjg.sig_kor_name == hang_jeong_gu)
+            )
+            .group_by(br2.route_name)
+            .subquery()
+        )
 
         q = (
             select(
-                brt.route_name,
-                brt.route_order,
-                func.ST_X(brt.location).label("latitude"),
-                func.ST_Y(brt.location).label("longitude"),
-                brt.station_name,
-                brt.ars_id,
+                br1.route_name,
+                br1.route_order,
+                func.ST_X(br1.location).label("latitude"),
+                func.ST_Y(br1.location).label("longitude"),
+                br1.station_name,
+                br1.ars_id,
             )
-            .select_from(br)
-            .join(brt, br.route_name == brt.route_name)
-            .join(hjg, func.ST_Within(br.location, hjg.geometry))
-            .where(br.route_name == route_name, hjg.sig_kor_name == hang_jeong_gu)
-            .group_by(
-                brt.route_name,
-                brt.route_order,
-                brt.location,
-                brt.station_name,
-                brt.ars_id,
-            )
+            .select_from(sub_query)
+            .join(br1, sub_query.c.route_name == br1.route_name)
         )
 
         result = await self.session.execute(q)
