@@ -1,5 +1,5 @@
 import pandas as pd
-from sqlalchemy import select, delete, insert, func, case
+from sqlalchemy import select, delete, insert, func, case, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -238,6 +238,7 @@ class BusDAL(DalABC):
                 br.station_name.label("dest_station_name"),
                 (case((brt.ars_id == br.ars_id, True), else_=False)).label("dest"),
             )
+            .select_from(br)
             .join(brt, br.route_name == brt.route_name)
             .join(hjg, func.ST_Within(br.location, hjg.geometry))
             .where(br.station_name.like(f"%{dest}%"), hjg.sig_kor_name == hang_jeong_gu)
@@ -249,6 +250,76 @@ class BusDAL(DalABC):
                 brt.ars_id,
                 br.ars_id,
                 br.station_name,
+            )
+        )
+
+        result = await self.session.execute(q)
+        return result.all()
+
+    async def get_bus_route_name_by_destination_filter_hang_jeong_gu(
+        self, dest: str, hang_jeong_gu: str
+    ):
+        """
+        특정 시/구의 목적지(정류장)를 지나가는 버스 노선명을 조회한다
+
+        :param dest: 목적지(정류장) 이름
+        :param hang_jeong_gu: 목적지가 포함되는 지역 '구'의 이름
+        :return:
+        """
+
+        br = aliased(BusRoute)
+        brt = aliased(BusRoute)
+        hjg = aliased(HangJeongGu)
+
+        q = (
+            select(
+                distinct(brt.route_id).label("route_id"),
+                brt.route_name,
+            )
+            .select_from(br)
+            .join(brt, br.route_name == brt.route_name)
+            .join(hjg, func.ST_Within(br.location, hjg.geometry))
+            .where(br.station_name.like(f"%{dest}%"), hjg.sig_kor_name == hang_jeong_gu)
+            .order_by(brt.route_name)
+        )
+
+        result = await self.session.execute(q)
+        return result.all()
+
+    async def get_bus_route_by_route_name_filter_hang_jeong_gu(
+        self, route_name: str, hang_jeong_gu: str
+    ):
+        """
+        특정 시/구의 목적지를 지나가는 버스 노선의 노선 정보를 조회한다
+
+        :param route_name: 버스 노선명
+        :param hang_jeong_gu: 목적지가 포함되는 지역 '구'의 이름
+        :return:
+        """
+
+        br = aliased(BusRoute)
+        brt = aliased(BusRoute)
+        hjg = aliased(HangJeongGu)
+
+        q = (
+            select(
+                brt.route_name,
+                brt.route_order,
+                func.ST_X(brt.location).label("latitude"),
+                func.ST_Y(brt.location).label("longitude"),
+                brt.station_name,
+                brt.ars_id,
+            )
+            .select_from(br)
+            .join(brt, br.route_name == brt.route_name)
+            .join(hjg, func.ST_Within(br.location, hjg.geometry))
+            .where(br.route_name == route_name, hjg.sig_kor_name == hang_jeong_gu)
+            .group_by(
+                brt.route_name,
+                brt.route_order,
+                brt.location,
+                brt.station_name,
+                brt.ars_id,
             )
         )
 

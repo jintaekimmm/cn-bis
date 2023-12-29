@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from app.api.v1 import station, route
+from app.api.v2 import route as route_v2
 from connection.database import engine
 from helpers.response import ErrorJSONResponse, DefaultJSONResponse
 
@@ -54,6 +55,7 @@ def initial_route(app: FastAPI) -> None:
 
     app.include_router(station.router, prefix="/v1")
     app.include_router(route.router, prefix="/v1")
+    app.include_router(route_v2.router, prefix="/v2")
 
 
 def initial_middleware(app: FastAPI) -> None:

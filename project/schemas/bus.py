@@ -58,3 +58,16 @@ class BusRoutesSearch(BaseModel):
 
 class BusRoutesSearchResponse(DefaultResponse):
     data: list[BusRoutesSearch]
+
+
+class BusRouteName(BaseModel):
+    route_id: int
+    route_name: str
+
+
+class BusRouteNameResponse(DefaultResponse):
+    data: list[BusRouteName]
+
+
+class BusRouteNodeResponse(DefaultResponse):
+    data: BusRoute

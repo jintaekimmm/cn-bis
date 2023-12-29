@@ -32,6 +32,7 @@ async def get_route_search_api(
 
     목적지 검색 시에, 해당 정류장을 지나가는 모든 버스 노선을 조회하므로 반환 값의 양이 엄청 커질 수 있다
     """
+
     if not destination:
         return ErrorJSONResponse(
             message="목적지를 입력해주세요",
