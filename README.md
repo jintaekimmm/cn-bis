@@ -9,6 +9,10 @@
 - FastAPI
 - MySQL 8.0.27
 
+## Architecture
+![architecture](https://github.com/jintaekimmm/cn-bis/assets/31076511/a84b1ce2-7f31-4bcf-87d0-affe1a48752e)
+
+
 ## Virtual Environment
 
 이 프로젝트는 [poetry](https://python-poetry.org/docs/)를 사용하여 package와 dependency를 관리한다
