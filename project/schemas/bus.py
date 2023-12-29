@@ -25,9 +25,17 @@ class Route(BaseModel):
     location: Location
 
 
+class RouteDestination(Route):
+    destination: bool
+
+
 class BusRoute(BaseModel):
     route_name: str
     route: list[Route]
+
+
+class BusRouteDestination(BusRoute):
+    route: list[RouteDestination]
 
 
 class BusRoutes(BaseModel):
@@ -41,3 +49,12 @@ class BusSearch(BaseModel):
 
 class BusSearchResponse(DefaultResponse):
     data: BusSearch
+
+
+class BusRoutesSearch(BaseModel):
+    bus_route: list[BusRouteDestination]
+    station_name: str
+
+
+class BusRoutesSearchResponse(DefaultResponse):
+    data: list[BusRoutesSearch]

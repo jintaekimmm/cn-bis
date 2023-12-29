@@ -1,9 +1,10 @@
 import pandas as pd
-from sqlalchemy import select, delete, insert, func
+from sqlalchemy import select, delete, insert, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from crud.abstract import DalABC
-from models import BusRoute, BusStation
+from models import BusRoute, BusStation, HangJeongGu
 
 
 class LoaderDAL(DalABC):
@@ -205,6 +206,50 @@ class BusDAL(DalABC):
             )
             .where(BusRoute.route_name.like(f"%{route_name}%"))
             .order_by(BusRoute.route_name, BusRoute.route_order)
+        )
+
+        result = await self.session.execute(q)
+        return result.all()
+
+    async def get_bus_routes_by_destination_filter_hang_jeong_gu(
+        self, dest: str, hang_jeong_gu: str
+    ):
+        """
+        특정 시/구의 목적지(정류장)를 지나가는 버스 노선을 조회한다
+
+        :param dest: 목적지(정류장) 이름
+        :param hang_jeong_gu: 목적지가 포함되는 지역 '구'의 이름
+        :return:
+        """
+
+        br = aliased(BusRoute)
+        brt = aliased(BusRoute)
+        hjg = aliased(HangJeongGu)
+
+        q = (
+            select(
+                brt.route_name,
+                brt.route_order,
+                func.ST_X(brt.location).label("latitude"),
+                func.ST_Y(brt.location).label("longitude"),
+                brt.station_name,
+                brt.ars_id,
+                br.ars_id.label("dest_ars_id"),
+                br.station_name.label("dest_station_name"),
+                (case((brt.ars_id == br.ars_id, True), else_=False)).label("dest"),
+            )
+            .join(brt, br.route_name == brt.route_name)
+            .join(hjg, func.ST_Within(br.location, hjg.geometry))
+            .where(br.station_name.like(f"%{dest}%"), hjg.sig_kor_name == hang_jeong_gu)
+            .group_by(
+                brt.route_name,
+                brt.route_order,
+                brt.location,
+                brt.station_name,
+                brt.ars_id,
+                br.ars_id,
+                br.station_name,
+            )
         )
 
         result = await self.session.execute(q)

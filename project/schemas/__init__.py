@@ -8,8 +8,12 @@ from .bus import (
     BusStationLocation,
     BusStationLocationResponse,
     Route,
+    RouteDestination,
     BusRoute,
     BusRoutes,
     BusSearch,
     BusSearchResponse,
+    BusRoutesSearch,
+    BusRouteDestination,
+    BusRoutesSearchResponse,
 )
