@@ -39,6 +39,9 @@ async def get_station_location_api(
 
     이를 어느정도는 해결하기 위해서 '서울 버스 운행 노선 정보' 데이터에 포함된 정류장의 데이터를 함께 사용하며 'extend' 옵션을 설정한채로 요청하면
     이 데이터에서 조회한 결과를 합쳐 반환하도록 하였다
+
+      - 서울과 다른 지역간의 ARS ID가 유니크하지 않으므로 일부 데이터 반환에 문제가 있을 소지는 있다
+      - 이런 이유로 bus_station과 bus_route 테이블을 mobile_id, ars_id로 join 하지 않는다
     """
 
     bus_dal = crud.BusDAL(session=session)
