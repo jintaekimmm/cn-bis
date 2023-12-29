@@ -42,3 +42,22 @@ CREATE INDEX idx_mobile_id
     ON bus_station (mobile_id);
 CREATE SPATIAL INDEX spx_location
     ON bus_station (location);
+
+
+CREATE TABLE IF NOT EXISTS hang_jeong_gu
+(
+    id           bigint primary key auto_increment,
+    sig_code     int         not null comment '시구 코드',
+    sido         varchar(32) not null comment '시도 이름',
+    sig_eng_name varchar(64) not null comment '시구 영어 이름',
+    sig_kor_name varchar(64) not null comment '시구 한글 이름',
+    geometry     POLYGON     SRID 4326 not null comment '위치(Polygon)',
+    created_at   datetime(6) not null comment '생성일자',
+    updated_at   datetime(6) not null comment '변경일자'
+);
+
+CREATE INDEX idx_sig_kor_name
+    ON hang_jeong_gu (sig_kor_name);
+
+CREATE SPATIAL INDEX spx_geometry
+    ON hang_jeong_gu (geometry);
