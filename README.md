@@ -19,7 +19,7 @@
 
 - [poetry install](https://python-poetry.org/docs/#installation)
 
-data loader script를 실행 시켜야 하므로, package와 dependency를 설치한다
+data loader script를 실행 시켜야 하므로, virtual environment 환경에서 package와 dependency를 설치한다
 ```shell
 # package and dependencies install
 $ poetry install
@@ -56,6 +56,15 @@ $ docker compose -p cn-bis -f docker/docker-compose.local.yaml --env-file ./proj
 ```
 
 ### data load
+
+API에서 사용하는 데이터는 다음과 같다
+- [서울시 버스 운행 노선 정보(서울 열린 데이터 광장)](https://data.seoul.go.kr/dataList/OA-1095/F/1/datasetView.do)
+- [전국 버스 정류장 위치 정보(공공 데이터 포털)](https://www.data.go.kr/data/15067528/fileData.do)
+
+두 데이터를 탐색 및 전처리하여 load 할 수 있는 데이터로 만들어두었다. 행정구 데이터의 경우에는 모든 지역을 처리하지 않고, '서울'의 '구' 지역만 사용하였다
+- [cn-bis-preprocess: 정류장 및 운행 노선 데이터 탐색 및 전처리](https://github.com/jintaekimmm/cn-bis-preprocess/blob/main/bus/bus.ipynb)
+- [cn-bis-preprocess: 행정구 데이터 전처리](https://github.com/jintaekimmm/cn-bis-preprocess/blob/main/geo/address.ipynb)
+
 
 서비스 실행 후, data를 database에 load 시킨다
 
