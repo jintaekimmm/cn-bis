@@ -3,7 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from app.api.v1 import station
+from app.api.v1 import station, route
 from connection.database import engine
 from helpers.response import ErrorJSONResponse, DefaultJSONResponse
 
@@ -53,6 +53,7 @@ def initial_route(app: FastAPI) -> None:
         return DefaultJSONResponse(message="ok")
 
     app.include_router(station.router, prefix="/v1")
+    app.include_router(route.router, prefix="/v1")
 
 
 def initial_middleware(app: FastAPI) -> None:

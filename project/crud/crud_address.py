@@ -6,17 +6,6 @@ from models import HangJeongGu
 
 
 class AddressDAL(DalABC):
-    async def delete_hang_jeong_gu(self):
-        """
-        hang_jeong_gu table 데이터를 삭제한다
-
-        :return:
-        """
-
-        q = delete(HangJeongGu).execution_options(synchronize_session="fetch")
-
-        await self.session.execute(q)
-
     async def bulk_insert_hang_jeong_gu(self, gdf: GeoDataFrame):
         """
         hang_jeong_gu 데이터를 bulk insert 한다
@@ -40,3 +29,14 @@ class AddressDAL(DalABC):
                 for row in gdf.to_dict(orient="records")
             ],
         )
+
+    async def delete_hang_jeong_gu(self):
+        """
+        hang_jeong_gu table 데이터를 삭제한다
+
+        :return:
+        """
+
+        q = delete(HangJeongGu).execution_options(synchronize_session="fetch")
+
+        await self.session.execute(q)
