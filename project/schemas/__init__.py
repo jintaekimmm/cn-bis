@@ -16,4 +16,7 @@ from .bus import (
     BusRoutesSearch,
     BusRouteDestination,
     BusRoutesSearchResponse,
+    BusRouteName,
+    BusRouteNameResponse,
+    BusRouteNodeResponse,
 )
