@@ -46,11 +46,11 @@ def initial_route(app: FastAPI) -> None:
 
     @app.get("/")
     async def root():
-        return DefaultJSONResponse(message="ok", success=True)
+        return DefaultJSONResponse(message="ok")
 
     @app.get("/health")
     async def health_check():
-        return DefaultJSONResponse(message="ok", success=True)
+        return DefaultJSONResponse(message="ok")
 
     app.include_router(station.router, prefix="/v1")
 
